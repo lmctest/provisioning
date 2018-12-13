@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+#
+
+#
+# Author:  Martin Holy / LMC / Architecture
+# Created: Prague, 12/2018
+# Descr.:  Switch k8s cluster context,
+#          so you can easily change the cluster
+#          you want to control
+#
+
+function usage() {
+  echo -e "Usage:\n\t$(dirname ${0})/$(basename ${0}) K8S_CONTEXT"
+  echo -e "\nExample:\n\t$(dirname ${0})/$(basename ${0}) lmc"
+}
+
+if [[ $# -gt 1 ]]
+then
+  echo "Wrong number of arguments was specified. Try better next time ;)"
+  usage
+  exit 1
+fi
+
+function get_cluster_name() {
+  kubectl config current-context || return 1
+  return 0
+}
+
+function get_node_list() {
+  kubectl get nodes || return 1
+  return 0
+}
+
+function print_error() {
+  local p_level="$(echo ${1} | tr 'a-z' 'A-Z')"
+  local p_msg="${2}"
+  local ldate="$(date '+%Y-%m-%d %H:%M:%S')"
+  
+  echo "${ldate} :: [[ ${p_level} ]] :: ${p_msg}"
+  return
+}
+
+readonly CHOICE="$(echo ${1} | tr 'A-Z' 'a-z')"
+case ${CHOICE} in
+  "gke") gcloud container clusters get-credentials standard-cluster-1 --zone europe-west3-c --project lmccluster-225215 &>/dev/null \
+         && kubectl config use-context gke_lmccluster-225215_europe-west3-c_standard-cluster-1 &>/dev/null \
+         && print_error "INFO" "Switched to gke k8s." || print_error "ERROR" "Could not switch to gke ks8."
+         echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+         get_node_list 2>/dev/null
+         ;;
+  "lmc") kubectl config use-context lmc &>/dev/null \
+         && print_error "INFO" "Switched to LMC k8s." || print_error "ERROR" "Could not switch to LMC ks8."
+         echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+         get_node_list 2>/dev/null
+         ;;
+  *)     echo "Wrong context specified."
+         usage
+         echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+         exit 2
+         ;;
+esac
+
+exit 0
