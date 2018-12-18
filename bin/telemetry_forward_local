@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+#
+
+set -e
+
+##F        ##
+# Functions #
+##         ##
+function mutex() {
+  local myself="$(dirname ${0})/$(basename ${0})"
+  local myself_id=$(ps -ef | grep -i "${myself}" | grep -v "grep" | awk '{ print $2 }' | head -n 1)
+
+  if [[ -z ${myself_id} ]] || [[ ${myself_id} -eq $$ ]]
+  then
+    return 0
+  fi
+
+  return 1
+}
+
+function forward_system() {
+  local app="${1}"
+  local namespace="${2}"
+  local rport="${3}"
+  local lport="${4}"
+
+  if [[ -z ${lport} ]]
+  then
+    lport=${rport}
+  fi
+
+  if [[ -z ${app} ]] || [[ -z ${namespace} ]] || [[ -z ${rport} ]] || [[ -z ${lport} ]]
+  then
+    return 1
+  fi
+
+  kubectl port-forward -n ${namespace} $(kubectl get pod -n ${namespace} -l app=${app} -o jsonpath='{.items[0].metadata.name}') ${lport}:${rport} &
+
+  return 0
+}
+
+function get_forward_id() {
+  local app="${1}"
+  local rport="${2}"
+  local lport="${3}"
+
+  if [[ -z ${lport} ]]
+  then
+    lport=${rport}
+  fi
+
+  if [[ -z ${app} ]] || [[ -z ${rport} ]] || [[ -z ${lport} ]]
+  then
+    return 1
+  fi
+
+  local id=$(ps -ef | grep -i forward | grep "${lport}:${rport}" | awk '{ print $2 }' | head -n 1)
+  echo ${id}
+  return 0
+}
+
+##M   ##
+# Main #
+##    ##
+# only one instance at the same time
+mutex
+if [[ $? -ne 0 ]]; then exit 1; fi
+
+# main loop
+while :
+do
+  unset forward_id 2>/dev/null
+
+  # jaeger
+  forward_id=$(get_forward_id "jaeger" "16686")
+  if [[ -z ${forward_id} ]]
+  then	  
+    forward_system "jaeger" "istio-system" "16686"
+  fi
+    
+  # grafana
+  forward_id=$(get_forward_id "grafana" "3000")
+  if [[ -z ${forward_id} ]]
+  then
+    forward_system "grafana" "istio-system" "3000"
+  fi
+  
+  # prometheus
+  forward_id=$(get_forward_id "prometheus" "9090")
+  if [[ -z ${forward_id} ]]
+  then
+    forward_system "prometheus" "istio-system" "9090"
+  fi
+
+  # kiali
+  forward_id=$(get_forward_id "kiali" "20001")
+  if [[ -z ${forward_id} ]]
+  then
+    forward_system "kiali" "istio-system" "20001"
+  fi
+ 
+  # zipkin
+  forward_id=$(get_forward_id "zipkin" "9411")
+  if [[ -z ${forward_id} ]]
+  then
+    forward_system "zipkin" "istio-system" "9411"
+  fi
+ 
+  sleep 5
+done &>/dev/null &
+
+exit 0
