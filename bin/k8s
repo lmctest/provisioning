@@ -44,29 +44,56 @@ readonly CHOICE="$(echo ${1} | tr 'A-Z' 'a-z')"
 case ${CHOICE} in
   "gke") gcloud container clusters get-credentials standard-cluster-1 --zone europe-west3-c --project lmccluster-225215 &>/dev/null \
          && kubectl config use-context gke_lmccluster-225215_europe-west3-c_standard-cluster-1 &>/dev/null \
-         && get_node_list &>/dev/null \
-         && print_error "INFO" "Switched to gke k8s." || print_error "ERROR" "Could not switch to gke ks8." && exit 10
+         && get_node_list &>/dev/null
+
+         if [[ $? -ne 0 ]]
+         then
+           print_error "ERROR" "Could not switch to gke ks8." \
+           && exit 10
+         fi
+
+         print_error "INFO" "Switched to gke k8s."
          echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
          get_node_list 2>/dev/null
          ;;
   "lmc") kubectl config use-context lmc &>/dev/null \
-         && get_node_list &>/dev/null \
-         && print_error "INFO" "Switched to LMC k8s." || print_error "ERROR" "Could not switch to LMC ks8." && exit 11
+         && get_node_list &>/dev/null
+
+         if [[ $? -ne 0 ]]
+         then
+           print_error "ERROR" "Could not switch to LMC ks8." \
+           && exit 11
+         fi
+
+         print_error "INFO" "Switched to LMC k8s."
          echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
          get_node_list 2>/dev/null
          ;;
   "do")  kubectl config use-context do-ams3-k8s-1-12-3-do-1-ams3-1545141207895 &>/dev/null \
-         && get_node_list &>/dev/null \
-         && print_error "INFO" "Switched to DigitalOcean k8s." || print_error "ERROR" "Could not switch to DigitalOcean ks8." && exit 12
+         && get_node_list &>/dev/null
+
+         if [[ $? -ne 0 ]]
+         then
+           print_error "ERROR" "Could not switch to DigitalOcean ks8." \
+           && exit 12
+         fi
+         
+         print_error "INFO" "Switched to DigitalOcean k8s."
          echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
          get_node_list 2>/dev/null
          ;;
   *)     echo "Wrong context specified."
          usage
-         get_node_list &>/dev/null \
-         && echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n" \
-         || echo -e "\nNo working cluster found."         
-         exit 2
+         get_node_list &>/dev/null
+
+         if [[ $? -ne 0 ]]
+         then
+           echo -e "\nNo working cluster found."
+           exit 2
+         fi
+
+         echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+         get_node_list 2>/dev/null
          ;;
 esac
 
