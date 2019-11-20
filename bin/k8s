@@ -21,6 +21,12 @@ then
   exit 1
 fi
 
+function list_available_clusters() {
+  grep -E '".*"\)' "$(dirname ${0})/$(basename ${0})" \
+    | awk -F'"' '{ print $2 }' \
+    | grep -vE '(\*)|(list)'
+}
+
 function get_cluster_name() {
   kubectl config current-context || return 1
   return 0
@@ -42,43 +48,107 @@ function print_error() {
 
 readonly CHOICE="$(echo ${1} | tr 'A-Z' 'a-z')"
 case ${CHOICE} in
-  "gke")  gcloud container clusters get-credentials standard-cluster-2 --zone europe-west3-a --project lmctest2019 &>/dev/null \
-          && kubectl config use-context gke_lmctest2019_europe-west3-a_standard-cluster-2 &>/dev/null \
+  "list") list_available_clusters
+          ;;
+  "gke")  echo -e "\n\neval \$(docker-machine env -u)\n\n" \
+          && gcloud container clusters get-credentials standard-cluster-1 --zone europe-west3-a --project lmctest-231712 &>/dev/null \
+          && kubectl config use-context gke_lmctest-231712_europe-west3-a_standard-cluster-1 &>/dev/null \
           && get_node_list &>/dev/null
- 
+
           if [[ $? -ne 0 ]]
           then
-            print_error "ERROR" "Could not switch to gke ks8." \
+            print_error "ERROR" "Could not switch to the gke ks8." \
             && exit 10
           fi
  
-          print_error "INFO" "Switched to gke k8s."
+          print_error "INFO" "Switched to the gke k8s."
           echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
           get_node_list 2>/dev/null
           ;;
-  "lmc")  kubectl config use-context lmc &>/dev/null \
+  "lmc") echo -e "\n\neval \$(docker-machine env -u)\n\n" \
+          && kubectl config use-context lmc &>/dev/null \
           && get_node_list &>/dev/null
 
           if [[ $? -ne 0 ]]
           then
-            print_error "ERROR" "Could not switch to LMC ks8." \
+            print_error "ERROR" "Could not switch to the LMC ks8." \
             && exit 11
           fi
 
-          print_error "INFO" "Switched to LMC k8s."
+          print_error "INFO" "Switched to the LMC k8s."
           echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
           get_node_list 2>/dev/null
           ;;
+  "narwhal")
+          echo -e "\n\neval \$(docker-machine env -u)\n\n" \
+          && kubectl config use-context dev-internal &>/dev/null \
+          && get_node_list &>/dev/null
+
+          if [[ $? -ne 0 ]]
+          then
+            print_error "ERROR" "Could not switch to the NARWHAL ks8." \
+            && exit 11
+          fi
+
+          print_error "INFO" "Switched to the NARWHAL k8s."
+          echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+          get_node_list 2>/dev/null
+          ;;
+  "dev2-ict")
+          echo -e "\n\neval \$(docker-machine env -u)\n\n" \
+          && kubectl config use-context dev2-ict &>/dev/null \
+          && get_node_list &>/dev/null
+
+          if [[ $? -ne 0 ]]
+          then
+            print_error "ERROR" "Could not switch to the DEV2-ICT ks8." \
+            && exit 11
+          fi
+
+          print_error "INFO" "Switched to the DEV2-ICT k8s."
+          echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+          get_node_list 2>/dev/null
+          ;;
+  "dev1-services")
+          echo -e "\n\neval \$(docker-machine env -u)\n\n" \
+          && kubectl config use-context ubuntu-k8s-dev1_services &>/dev/null \
+          && get_node_list &>/dev/null
+
+          if [[ $? -ne 0 ]]
+          then
+            print_error "ERROR" "Could not switch to the DEV1-SERVICES ks8." \
+            && exit 11
+          fi
+
+          print_error "INFO" "Switched to the DEV1-SERVICES k8s."
+          echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+          get_node_list 2>/dev/null
+          ;;
+  "prozeta") echo -e "\n\neval \$(docker-machine env -u)\n\n" \
+             && kubectl config use-context prozeta &>/dev/null \
+             && get_node_list &>/dev/null
+
+             if [[ $? -ne 0 ]]
+             then
+               print_error "ERROR" "Could not switch to the PROZETA ks8." \
+               && exit 11
+             fi
+
+             print_error "INFO" "Switched to the PROZETA k8s."
+             echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
+             get_node_list 2>/dev/null
+             ;;
   "mini") kubectl config use-context minikube &>/dev/null \
+          && echo -e "\n\neval \$(minikube docker-env)\n\n" \
           && get_node_list &>/dev/null
 
           if [[ $? -ne 0 ]]
           then
-            print_error "ERROR" "Could not switch to minikube ks8." \
-            && exit 11
+            print_error "ERROR" "Could not switch to the minikube ks8." \
+            && exit 12
           fi
 
-          print_error "INFO" "Switched to minikube k8s."
+          print_error "INFO" "Switched to the minikube k8s."
           echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
           get_node_list 2>/dev/null
           ;;
@@ -89,7 +159,7 @@ case ${CHOICE} in
           if [[ $? -ne 0 ]]
           then
             echo -e "\nNo working cluster found."
-            exit 2
+            exit 20
           fi
 
           echo -e "\nCurrent cluster: $(get_cluster_name 2>/dev/null)\n"
