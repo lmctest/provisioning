@@ -111,7 +111,7 @@ case ${CHOICE} in
           ;;
   "dev1-services")
           echo -e "\n\neval \$(docker-machine env -u)\n\n" \
-          && kubectl config use-context ubuntu-k8s-dev1_services &>/dev/null \
+          && kubectl config use-context dev1-services &>/dev/null \
           && get_node_list &>/dev/null
 
           if [[ $? -ne 0 ]]
